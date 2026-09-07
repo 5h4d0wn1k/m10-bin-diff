@@ -1,6 +1,6 @@
 # M10 — Binary Diff Tool
 
-Compares binary files byte-by-byte with hashing and entropy analysis.
+Compares binary files with real diffing techniques: byte diffing, n-gram similarity, entropy profiling, and import/section comparison.
 
 ## Overview
 
@@ -8,66 +8,102 @@ This project compares two binary files and reports:
 - MD5/SHA1/SHA256 hash comparison
 - Byte-by-byte differences with offsets
 - Similarity ratio (difflib)
+- N-gram Jaccard similarity on normalized bytes
 - Per-block Shannon entropy comparison
-- Hex diff window for visual inspection
+- Instruction-level normalization for meaningful similarity
 
 ## Features
 
 - **Hash comparison**: detect identical files
-- **Byte diff**: list every differing offset
-- **Entropy comparison**: spot obfuscated/encrypted regions
-- **Similarity ratio**: quantify how similar files are
-- **Hex window**: quick visual sanity check
+- **Byte diff**: list every differing offset, handle length differences
+- **N-gram similarity**: Jaccard similarity on 4-byte instruction n-grams
+- **Entropy comparison**: spot obfuscated/encrypted regions via delta profile
+- **Normalization**: masks register encoding variance for better similarity
+- **Similarity ratio**: difflib SequenceMatcher
 
 ## Usage
 
 ```bash
+# Compare two binaries
 python3 bin_diff.py original.bin modified.bin
+
+# JSON output
+python3 bin_diff.py original.bin modified.bin --json
+
+# Custom n-gram size
+python3 bin_diff.py original.bin modified.bin --ngram-size 8
+
+# Save report
+python3 bin_diff.py original.bin modified.bin -o reports/diff.json
+
+# Offline demo
+python3 bin_diff.py --demo
 ```
 
 ## Example Output
 
 ```
 === M10 - Binary Diff Tool ===
-File A: original.bin (4096 bytes)
-File B: modified.bin (4098 bytes)
-
--- Hashes --
-  MD5 A: 5d41402abc4b2a76b9719d911017c592
+File A: f1.o (1080 bytes)
+File B: f2.o (1080 bytes)
+Identical: False
+Byte differences: 41
+Length diff: 0
+  @0x41 A=0x04 B=0x44
+  @0x43 A=0xc3 B=0x01
   ...
-
-Total differing offsets: 3
-  @0x0400 A=90  B=cc
+Similarity ratio: 0.9941747572815534
+N-gram Jaccard (n=4): 0.910448
+Entropy mean delta: 0.023438
 ```
 
-## Legal Disclaimer
+## Tests
 
-**IMPORTANT: Read before use.**
+```bash
+python -m unittest discover -s tests
+```
 
-This project is provided for **educational and authorized security testing purposes only**. 
+## Live Lab Test Plan
+
+1. Run `--demo` offline and verify exit code 0
+2. Compare two compiled `.o` files from `gcc -c` and verify real diffs
+3. Compare a file against itself and verify ratio 1.0 / identical true
+4. Compare files of different lengths and verify length diff detection
+5. Verify entropy deltas identify changed regions
+6. Compare md5sum output against tool's hash output
+
+## Metrics
+
+- Zero external dependencies (stdlib only)
+- Multiple independent diff techniques (hashes, bytes, n-grams, entropy)
+- N-gram Jaccard similarity for code-level comparison
+- Instruction normalization for register-variant insensitivity
+- Validated on real gcc-compiled objects
+- Deterministic offline fixture comparison
+
+## IMPORTANT: Read before use.
+
+This project is provided for **educational and authorized security testing purposes only**.
 
 ### Authorization Requirements
-- You MUST have explicit written permission from the network owner before using this tool
-- Unauthorized interception of network communications is illegal under federal and state laws
-- This tool should ONLY be used on networks you own or have written authorization to test
+- You MUST have explicit written permission from the system owner before using this tool
+- Compare only binaries you own or have authorization to analyze
+- This tool should ONLY be used on files you have written authorization for
 
 ### Legal Framework
 - **Computer Fraud and Abuse Act (CFAA)**: Unauthorized access to computer systems is a federal crime
-- **Wiretap Act (18 U.S.C. § 2511)**: Interception of electronic communications without consent is illegal
-- **State Laws**: Many states have additional computer crime and wiretapping statutes
-- **GDPR/CCPA**: Data collection may be subject to privacy regulations
+- **State Laws**: Many states have additional computer crime statutes
 
 ### Acceptable Use
-- Testing security of your own networks
-- Authorized penetration testing with written scope
-- Academic research in controlled lab environments
-- Security education and training
+- Malware triage and binary similarity analysis
+- Patch diffing for authorized security assessments
+- Academic research and education
+- Reverse engineering for your own software
 
 ### Prohibited Use
-- Intercepting communications on networks you do not own
-- Attacking infrastructure without authorization
+- Diffing binaries belonging to others without authorization
+- Using findings to facilitate unauthorized access
 - Any activity that violates applicable laws or regulations
-- Commercial use without proper licensing
 
 ### No Warranty
 This software is provided "AS IS" without warranty of any kind. The author is not responsible for any misuse or damage caused by this software.
